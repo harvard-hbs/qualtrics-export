@@ -78,7 +78,7 @@ positional arguments:
     check               Check the status of survey response export
     download            Download the data for exported surveys
 ```
-`
+
 ### Export
 
 ```
