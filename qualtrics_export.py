@@ -5,7 +5,13 @@ downloading the data from Qualtrics surveys.
     python qualtrics_export.py list
 
 * Export a survey based on ID:
-    python qualtrics_export.py export <survey-id>"""
+    python qualtrics_export.py export <survey-id>
+
+* Check on export status:
+    python qualtrics_export.py check <survey-id> <progress-id>
+
+* Download survey response data to a local file
+    python qualtrics_export.py download <survey-id> <progress-id>"""
 
 import argparse
 import requests
@@ -52,7 +58,94 @@ def main():
         print(f"Checking, maybe downloading {survey_id}/{progress_id}...")
         download_survey(survey_id, progress_id)
 
-        
+
+def list_surveys():
+    """Return a list of all known surveys."""
+    r = requests.get(f"{BASE_URL}/surveys", headers=HEADERS)
+    r.raise_for_status()
+    rj = r.json()
+    survey_list = rj["result"]["elements"]
+    return survey_list
+
+
+def request_result_export(survey_id):
+    """Start an export for the given survey, returning a progress ID"""
+    r = requests.post(
+        f"{BASE_URL}/surveys/{survey_id}/export-responses",
+        headers=HEADERS,
+        json={"format": "ndjson"},
+    )
+    r.raise_for_status()
+    rj = r.json()
+    progress_id = rj["result"]["progressId"]
+    return progress_id
+
+
+def download_survey(survey_id, progress_id):
+    """Check if the export for the survey is finished and, if so, download."""
+    print(f"Attempting to get response data '{survey_id}'/{progress_id}...")
+    status, zip_file = check_and_get_responses(survey_id, progress_id)
+    if status == "complete":
+        print(f"Read data as {zip_file.namelist()}")
+        write_survey_data(zip_file)
+    else:
+        print(
+            f"Warning: survey export '{survey_id}/{progress_id}' not completed: {status}"
+        )
+
+
+def check_and_get_responses(survey_id, progress_id):
+    """Check on export progress and download if completed."""
+    status, file_id = check_export_progress(survey_id, progress_id)
+    if status == "complete":
+        zip_file = get_export_response_data(survey_id, file_id)
+    else:
+        zip_file = None
+    return status, zip_file
+
+
+def check_export_progress(survey_id, progress_id):
+    """Check export progress based on progress ID. Return status
+    and the file ID if completed."""
+    r = requests.get(
+        f"{BASE_URL}/surveys/{survey_id}/export-responses/{progress_id}",
+        headers=HEADERS,
+    )
+    r.raise_for_status()
+    rj = r.json()
+    status = rj["result"]["status"]
+    file_id = rj["result"].get("fileId", None)
+    return status, file_id
+
+
+def get_export_response_data(survey_id, file_id):
+    """Download the response data as a ZIP file object."""
+    r = requests.get(
+        f"{BASE_URL}/surveys/{survey_id}/export-responses/{file_id}/file",
+        headers=HEADERS,
+        stream=True,
+    )
+    r.raise_for_status()
+    zip_file = ZipFile(BytesIO(r.content))
+    return zip_file
+
+
+def write_survey_data(zip_file):
+    """Write the zip file survey data as uncompressed file."""
+    # The zip file or the contents of the zip file can be
+    # written out to the file system, or it can be read
+    # directly into data objects as in the commented-out code.
+    file_name = zip_file.namelist()[0]
+
+    # Write to local file
+    print(f"Writing survey data to {file_name}...")
+    zip_file.extract(file_name)
+
+    # Alternative: Read into data records
+    # with jsonlines.Reader(zip_file.open(file_name)) as in_file:
+    #     json_recs = [resp for resp in in_file]
+
+
 def command_line_parser():
     parser = argparse.ArgumentParser(
         description="List, export, and download Qualtrics surveys"
@@ -101,87 +194,6 @@ def command_line_parser():
         help="The export progress ID returned by the export step.",
     )
     return parser
-    
-        
-def list_surveys():
-    """Return a list of all known surveys."""
-    r = requests.get(f"{BASE_URL}/surveys", headers=HEADERS)
-    r.raise_for_status()
-    rj = r.json()
-    survey_list = rj["result"]["elements"]
-    return survey_list
-
-
-def request_result_export(survey_id):
-    r = requests.post(
-        f"{BASE_URL}/surveys/{survey_id}/export-responses",
-        headers=HEADERS,
-        json={"format": "ndjson"},
-    )
-    r.raise_for_status()
-    rj = r.json()
-    progress_id = rj["result"]["progressId"]
-    return progress_id
-
-
-def download_survey(survey_id, progress_id):
-    """Check if the export for the survey is finished and, if so, download."""
-    print(f"Attempting to get response data '{survey_id}'/{progress_id}...")
-    status, zip_file = check_and_get_responses(survey_id, progress_id)
-    if status == "complete":
-        print(f"Read data as {zip_file.namelist()}")
-        write_survey_data(zip_file)
-    else:
-        print(
-            f"Warning: survey export '{survey_id}/{progress_id}' not completed: {status}"
-        )
-
-
-def check_and_get_responses(survey_id, progress_id):
-    status, file_id = check_export_progress(survey_id, progress_id)
-    if status == "complete":
-        zip_file = get_export_response_data(survey_id, file_id)
-    else:
-        zip_file = None
-    return status, zip_file
-
-
-def check_export_progress(survey_id, progress_id):
-    r = requests.get(
-        f"{BASE_URL}/surveys/{survey_id}/export-responses/{progress_id}",
-        headers=HEADERS,
-    )
-    r.raise_for_status()
-    rj = r.json()
-    status = rj["result"]["status"]
-    file_id = rj["result"].get("fileId", None)
-    return status, file_id
-
-
-def get_export_response_data(survey_id, file_id):
-    r = requests.get(
-        f"{BASE_URL}/surveys/{survey_id}/export-responses/{file_id}/file",
-        headers=HEADERS,
-        stream=True,
-    )
-    r.raise_for_status()
-    zip_file = ZipFile(BytesIO(r.content))
-    return zip_file
-
-
-def write_survey_data(zip_file):
-    # The zip file or the contents of the zip file can be
-    # written out to the file system, or it can be read
-    # directly into data objects as in the commented-out code.
-    file_name = zip_file.namelist()[0]
-
-    # Write to local file
-    print(f"Writing survey data to {file_name}...")
-    zip_file.extract(file_name)
-
-    # Alternative: Read into data records
-    # with jsonlines.Reader(zip_file.open(file_name)) as in_file:
-    #     json_recs = [resp for resp in in_file]
 
 
 if __name__ == "__main__":
