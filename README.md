@@ -1,6 +1,7 @@
 # Qualtrics Export
 
-Code for extracting survey responses from Qualtrics using their API.
+Code for extracting survey responses from Qualtrics using their API
+which can be exercised as a command-line tool.
 
 ## Authentication
 
@@ -8,16 +9,21 @@ This version of the code uses [API token
 authentication](https://api.qualtrics.com/2b4ffbd8af74e-api-key-authentication),
 but should also be compatible with OAuth authentication as well.
 
-You can copy the [`.env.default`](.env.default) to `.env` and fill in
-your `QUALTRICS_API_KEY` which will get picked up by `load_dotenv`.
+The API key should be made available to the code as a
+`QUALTRICS_API_KEY` environment variable. You must also provide a
+`QUALTRICS_HOST` environment variable as described in the *Getting
+Your API URL* section of the [Qualtrics API Quick
+Start](https://api.qualtrics.com/24d63382c3a88-api-quick-start).
 
 ## Stages
 
-### Identify Surveys
+### List Surveys
 
-This script requests the list of available surveys and then filters it
-based on name. You can also make requests for specific surveys, filter by
-date, etc. The Survey ID is what is needed to request an export.
+This part of the code requests the list of available surveys and then
+filters it based on name. The underlying API can also be used to make
+requests for specific surveys, filter by date, etc. but that is not
+provided in the example code. The Survey ID is what is needed to
+request an export.
 
 ## Request Export
 
@@ -55,3 +61,49 @@ implemented using `check_and_get_response`. The function
 to a JSONL file in the [`data/`](data) directory if has completed. It
 will print a warning message if the status is not complete.
 
+## Command-Line Usage
+
+### Top-Level Commands
+
+```
+usage: qualtrics_export.py [-h] {list,export,check,download} ...
+
+List, export, and download Qualtrics surveys
+
+positional arguments:
+  {list,export,check,download}
+                        Choose mode: list, export, download
+    list                List available surveys
+    export              Export survey specified by ID
+    check               Check the status of survey response export
+    download            Download the data for exported surveys
+```
+`
+### Export
+
+```
+usage: qualtrics_export.py export [-h] survey_id
+
+positional arguments:
+  survey_id   The ID of the survey to be exported.
+```
+
+### Check
+
+```
+usage: qualtrics_export.py check [-h] survey_id progress_id
+
+positional arguments:
+  survey_id    The ID of the survey to be downloaded
+  progress_id  The export progress ID returned by the export step.
+```
+
+### Download
+
+```
+usage: qualtrics_export.py download [-h] survey_id progress_id
+
+positional arguments:
+  survey_id    The ID of the survey to be downloaded
+  progress_id  The export progress ID returned by the export step.
+```
