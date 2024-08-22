@@ -59,8 +59,6 @@ API endpoint: `/surveys/{survey_id}/export-responses/{file_id}/file`
 
 ## Command-Line Usage
 
-### Top-Level Commands
-
 ```
 usage: qualtrics_export.py [-h] {list,export,check,download} ...
 
@@ -75,10 +73,16 @@ positional arguments:
     download            Download the data for exported surveys
 ```
 
+### List
+
+```
+usage: qualtrics_export.py list
+```
+
 ### Export
 
 ```
-usage: qualtrics_export.py export [-h] survey_id
+usage: qualtrics_export.py export survey_id
 
 positional arguments:
   survey_id   The ID of the survey to be exported.
@@ -87,7 +91,7 @@ positional arguments:
 ### Check
 
 ```
-usage: qualtrics_export.py check [-h] survey_id progress_id
+usage: qualtrics_export.py check survey_id progress_id
 
 positional arguments:
   survey_id    The ID of the survey to be downloaded
@@ -97,7 +101,7 @@ positional arguments:
 ### Download
 
 ```
-usage: qualtrics_export.py download [-h] survey_id progress_id
+usage: qualtrics_export.py download survey_id progress_id
 
 positional arguments:
   survey_id    The ID of the survey to be downloaded
